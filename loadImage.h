@@ -25,7 +25,7 @@
 
 
 #include <opencv2/core/mat.hpp>
-#include "../util/cuda/cudaUtility.h"
+#include "cudaUtility.h"
 
 
 /**
