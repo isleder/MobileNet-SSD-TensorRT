@@ -14,7 +14,6 @@
 #include <driver_types.h>  // cuda driver types
 #include <algorithm>
 
-#include <glog/logging.h>
 #define PERMUTELAYER_ORDERNUM 4
 #define BLOCK 512
 //
