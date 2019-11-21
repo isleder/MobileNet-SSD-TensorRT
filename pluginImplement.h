@@ -11,9 +11,10 @@
 
 #include "NvCaffeParser.h"
 #include "NvInferPlugin.h"
+#include "common.h"
 
 void cudaSoftmax(int n, int channels,  float* x, float*y);
-
+/*
 #define CHECK(status)                                                                                           \
     {                                                                                                                           \
         if (status != 0)                                                                                                \
@@ -24,7 +25,7 @@ void cudaSoftmax(int n, int channels,  float* x, float*y);
             abort();                                                                                                    \
         }                                                                                                                               \
     }
-
+*/
 using namespace nvinfer1;
 using namespace nvcaffeparser1;
 using namespace plugin;

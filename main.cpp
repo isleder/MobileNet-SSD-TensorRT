@@ -110,8 +110,10 @@ int main(int argc, char *argv[])
 
     float* data    = allocateMemory( dimsData , (char*)"input blob");
     std::cout << "allocate data" << std::endl;
+
     float* output  = allocateMemory( dimsOut  , (char*)"output blob");
     std::cout << "allocate output" << std::endl;
+    
     int height = 300;
     int width  = 300;
 
