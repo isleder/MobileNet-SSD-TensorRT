@@ -18,8 +18,10 @@
 {														\
 	if (status != 0)									\
 	{													\
-		std::cout << "Cuda failure: " << status;		\
-		abort();										\
+		std::cout << "Cuda failure: " << status << " ";	\
+        std::cout << cudaGetErrorString(status) << " "; \
+        std::cout <<" at line "<< __LINE__ << std::endl;\
+        abort();										\
 	}													\
 }
 using namespace std;
