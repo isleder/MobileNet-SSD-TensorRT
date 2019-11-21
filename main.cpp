@@ -4,7 +4,7 @@
 #include "pluginImplement.h"
 #include "tensorNet.h"
 #include "loadImage.h"
-#include "imageBuffer.h"
+//#include "imageBuffer.h"
 #include <chrono>
 #include <thread>
 
@@ -15,10 +15,9 @@ const char* weight = "../../model/MobileNetSSD_deploy.caffemodel";
 const char* INPUT_BLOB_NAME = "data";
 const char* OUTPUT_BLOB_NAME = "detection_out";
 static const uint32_t BATCH_SIZE = 1;
+const int CAMID = 1;
 
-//image buffer size = 10
-//dropFrame = false
-ConsumerProducerQueue<cv::Mat> *imageBuffer = new ConsumerProducerQueue<cv::Mat>(10,false);
+//ConsumerProducerQueue<cv::Mat> *imageBuffer = new ConsumerProducerQueue<cv::Mat>(10,false);
 
 class Timer {
 public:
@@ -48,17 +47,22 @@ float* allocateMemory(DimsCHW dims, char* info)
 {
     float* ptr;
     size_t size;
+
     std::cout << "Allocate memory: " << info << std::endl;
     size = BATCH_SIZE * dims.c() * dims.h() * dims.w();
-    assert(!cudaMallocManaged( &ptr, size*sizeof(float)));
+
+    assert(!cudaMallocManaged(&ptr, size*sizeof(float)));
     return ptr;
 }
 
 
-void loadImg( cv::Mat &input, int re_width, int re_height, float *data_unifrom,const float3 mean,const float scale )
+void loadImg(cv::Mat &input, 
+             int re_width, 
+             int re_height, 
+             float *data_unifrom, 
+             const float3 mean,
+             const float scale)
 {
-    int i;
-    int j;
     int line_offset;
     int offset_g;
     int offset_r;
@@ -67,26 +71,30 @@ void loadImg( cv::Mat &input, int re_width, int re_height, float *data_unifrom,c
     unsigned char *line = NULL;
     float *unifrom_data = data_unifrom;
 
-    cv::resize( input, dst, cv::Size( re_width, re_height ), (0.0), (0.0), cv::INTER_LINEAR );
+    cv::resize(input, dst, cv::Size( re_width, re_height ), (0.0), (0.0), cv::INTER_LINEAR);
+
     offset_g = re_width * re_height;
     offset_r = re_width * re_height * 2;
-    for( i = 0; i < re_height; ++i )
+
+    for(int i = 0; i < re_height; ++i)
     {
-        line = dst.ptr< unsigned char >( i );
+        line = dst.ptr< unsigned char >(i);
         line_offset = i * re_width;
-        for( j = 0; j < re_width; ++j )
+
+        for(int j = 0; j < re_width; ++j)
         {
             // b
-            unifrom_data[ line_offset + j  ] = (( float )(line[ j * 3 ] - mean.x) * scale);
+            unifrom_data[line_offset + j] = ((float)(line[j * 3] - mean.x) * scale);
             // g
-            unifrom_data[ offset_g + line_offset + j ] = (( float )(line[ j * 3 + 1 ] - mean.y) * scale);
+            unifrom_data[offset_g + line_offset + j] = ((float)(line[j * 3 + 1] - mean.y) * scale);
             // r
-            unifrom_data[ offset_r + line_offset + j ] = (( float )(line[ j * 3 + 2 ] - mean.z) * scale);
+            unifrom_data[offset_r + line_offset + j] = ((float)(line[j * 3 + 2] - mean.z) * scale);
         }
     }
 }
 
 //thread read video
+/*
 void readPicture()
 {
     cv::VideoCapture cap("../../testVideo/test.avi");
@@ -98,62 +106,106 @@ void readPicture()
         imageBuffer->add(image);
     }
 }
+*/
+/*
+int openCamera(int camid)
+{
+    cv::VideoCapture cap;
+    cv::Mat image;
+
+    if (!cap.open(camid))
+    {
+        return -1;
+    }
+
+    while(!quit)
+    {
+
+        if (!cap.read(image)) break;
+        if (image.empty()) break;
+
+        cv::waitKey(1);
+    }
+}
+*/
 
 int main(int argc, char *argv[])
 {
     std::vector<std::string> output_vector = {OUTPUT_BLOB_NAME};
+
     TensorNet tensorNet;
     tensorNet.LoadNetwork(model,weight,INPUT_BLOB_NAME, output_vector,BATCH_SIZE);
 
     DimsCHW dimsData = tensorNet.getTensorDims(INPUT_BLOB_NAME);
     DimsCHW dimsOut  = tensorNet.getTensorDims(OUTPUT_BLOB_NAME);
 
-    float* data    = allocateMemory( dimsData , (char*)"input blob");
-    std::cout << "allocate data" << std::endl;
+    //float* data = allocateMemory(dimsData, (char*)"input blob");
+    //std::cout << "allocate data" << std::endl;
 
-    float* output  = allocateMemory( dimsOut  , (char*)"output blob");
+    float* output = allocateMemory(dimsOut, (char*)"output blob");
     std::cout << "allocate output" << std::endl;
     
     int height = 300;
     int width  = 300;
 
-    cv::Mat frame,srcImg;
+    //cv::Mat frame, srcImg;
+    cv::Mat srcImg;
 
     void* imgCPU;
     void* imgCUDA;
     Timer timer;
 
-//    std::string imgFile = "../../testPic/test.jpg";
-//    frame = cv::imread(imgFile);
+    //std::thread readTread(readPicture);
+    //readTread.detach();
+    //
+    //
+    cv::VideoCapture cap;
+    cv::Mat image;
 
-    std::thread readTread(readPicture);
-    readTread.detach();
+    if (!cap.open(CAMID))
+    {
+        std::cout << "cannot open camera " << CAMID << std::endl;
+        return -1;
+    }
 
+    const size_t size = width * height * sizeof(float3);
+    void* imgData = malloc(size);
+    //memset(imgData, 0, size);
+    
     while(1)
     {
-        imageBuffer->consume(frame);
+        //imageBuffer->consume(frame);
 
-        srcImg = frame.clone();
-        cv::resize(frame, frame, cv::Size(300,300));
-        const size_t size = width * height * sizeof(float3);
-
-        if( CUDA_FAILED( cudaMalloc( &imgCUDA, size)) )
+        if (!cap.read(image)) 
         {
-            cout <<"Cuda Memory allocation error occured."<<endl;
-            return false;
+            std::cout << "cannot read camera image\n";
+            break;
         }
 
-        void* imgData = malloc(size);
-        memset(imgData, 0, size);
+        if (image.empty())
+        {            
+            std::cout << "camera image empty\n";
+            break;
+        }
 
-        loadImg(frame, height, width, (float*)imgData, make_float3(127.5,127.5,127.5), 0.007843);
+        srcImg = image.clone();
+        cv::resize(image, image, cv::Size(300,300));
+        
+        if (CUDA_FAILED(cudaMalloc(&imgCUDA, size)))
+        {
+            cout <<"Cuda Memory allocation error occured." << endl;
+            break;
+        }
 
-        cudaMemcpyAsync(imgCUDA,imgData,size,cudaMemcpyHostToDevice);
+        loadImg(image, height, width, (float*)imgData, make_float3(127.5,127.5,127.5), 0.007843);
+
+        cudaMemcpyAsync(imgCUDA, imgData, size, cudaMemcpyHostToDevice);
+
 
         void* buffers[] = { imgCUDA, output };
 
         timer.tic();
-        tensorNet.imageInference( buffers, output_vector.size() + 1, BATCH_SIZE);
+        tensorNet.imageInference(buffers, output_vector.size() + 1, BATCH_SIZE);
         timer.toc();
 
         double msTime = timer.t;
@@ -161,7 +213,7 @@ int main(int argc, char *argv[])
 
         vector<vector<float> > detections;
 
-        for (int k=0; k<100; k++)
+        for (int k=0; k < 100; k++)
         {
             if (output[7 * k + 1] == -1) break;
 
@@ -172,22 +224,36 @@ int main(int argc, char *argv[])
             float xmax = output[7*k + 5];
             float ymax = output[7*k + 6];
 
-            std::cout << classIndex << " , " << confidence << " , "  << xmin << " , " << ymin<< " , " << xmax<< " , " << ymax << std::endl;
+            std::cout << classIndex << " , " 
+                      << confidence << " , "  
+                      << xmin << " , " 
+                      << ymin<< " , " 
+                      << xmax<< " , " 
+                      << ymax << std::endl;
 
             int x1 = static_cast<int>(xmin * srcImg.cols);
             int y1 = static_cast<int>(ymin * srcImg.rows);
             int x2 = static_cast<int>(xmax * srcImg.cols);
             int y2 = static_cast<int>(ymax * srcImg.rows);
 
-            cv::rectangle(srcImg,cv::Rect2f(cv::Point(x1,y1),cv::Point(x2,y2)),cv::Scalar(255,0,255),1);
+            cv::rectangle(srcImg, 
+                          cv::Rect2f(cv::Point(x1,y1),
+                          cv::Point(x2,y2)),
+                          cv::Scalar(255,0,255),
+                          1);
 
         }
 
+
         cv::imshow("mobileNet",srcImg);
-        cv::waitKey(40);
-        free(imgData);
+        char c = cv::waitKey(1);
+        if (c == 27) 
+        {
+            break;
+        }
     }
 
+    free(imgData);
     cudaFree(imgCUDA);
     cudaFreeHost(imgCPU);
     cudaFree(output);
