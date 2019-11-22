@@ -4,6 +4,9 @@ bin/
 # Vim swap files
 *.swp
 
+# Vscode editor
+.vscode
+
 # Video files
 *.h265
 *.avi
