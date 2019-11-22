@@ -42,14 +42,14 @@ set(CUDA_NVCC_FLAGS
 	-gencode arch=compute_62,code=sm_62
         )
 
-file(GLOB cudaSources util/cuda/*.cu)
-file(GLOB cudaIncludes util/cuda/*.h)
+file(GLOB cudaSources cuda/*.cu)
+file(GLOB cudaIncludes cuda/*.h)
 
-file(GLOB sources *.cu *.cpp util/*.cpp util/cuda/*.cu)
-file(GLOB includes util/*.h util/cuda/*.h)
+file(GLOB sources *.cu *.cpp cuda/*.cpp cuda/*.cu)
+file(GLOB includes cuda/*.h)
 
-include_directories(${PROJECT_INCLUDE_DIR}/util)
-include_directories(${PROJECT_BINARY_DIR}/util)
+include_directories(${PROJECT_INCLUDE_DIR}/cuda)
+include_directories(${PROJECT_BINARY_DIR}/cuda)
 include_directories(${OpenCV_INCLUDE_DIRS})
 ##
 
