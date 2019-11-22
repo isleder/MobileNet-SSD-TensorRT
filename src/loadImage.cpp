@@ -21,7 +21,7 @@
  */
 #include <iostream>
 #include "loadImage.h"
-#include "cuda/cudaMappedMemory.h"
+#include "../cuda/cudaMappedMemory.h"
 
 //#include <QImage>
 #include <opencv2/core/mat.hpp>

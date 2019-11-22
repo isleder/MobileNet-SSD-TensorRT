@@ -45,11 +45,13 @@ set(CUDA_NVCC_FLAGS
 file(GLOB cudaSources cuda/*.cu)
 file(GLOB cudaIncludes cuda/*.h)
 
-file(GLOB sources *.cu *.cpp cuda/*.cpp cuda/*.cu)
-file(GLOB includes cuda/*.h)
+file(GLOB sources *.cu *.cpp src/*.cpp src/*.cu cuda/*.cpp cuda/*.cu)
+file(GLOB includes src/*.h cuda/*.h)
 
 include_directories(${PROJECT_INCLUDE_DIR}/cuda)
+include_directories(${PROJECT_INCLUDE_DIR}/src)
 include_directories(${PROJECT_BINARY_DIR}/cuda)
+include_directories(${PROJECT_BINARY_DIR}/src)
 include_directories(${OpenCV_INCLUDE_DIRS})
 ##
 
@@ -74,5 +76,5 @@ foreach(include ${includes})
     install(FILES "${include}" DESTINATION include/inferLib)
 endforeach()
 
-add_executable(mobileNet main.cpp )
+add_executable(mobileNet src/main.cpp )
 target_link_libraries(mobileNet inferLib ${OpenCV_LIBS})
