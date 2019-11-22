@@ -4,40 +4,19 @@
 #include "pluginImplement.h"
 #include "tensorNet.h"
 #include "loadImage.h"
-//#include "imageBuffer.h"
 #include <chrono>
 #include <thread>
-
+#include "Timer.h"
 
 const char* model  = "../../model/MobileNetSSD_deploy_iplugin.prototxt";
 const char* weight = "../../model/MobileNetSSD_deploy.caffemodel";
 
 const char* INPUT_BLOB_NAME = "data";
 const char* OUTPUT_BLOB_NAME = "detection_out";
+
 static const uint32_t BATCH_SIZE = 1;
 const int CAMID = 1;
 
-//ConsumerProducerQueue<cv::Mat> *imageBuffer = new ConsumerProducerQueue<cv::Mat>(10,false);
-
-class Timer {
-public:
-    void tic() {
-        start_ticking_ = true;
-        start_ = std::chrono::high_resolution_clock::now();
-    }
-    void toc() {
-        if (!start_ticking_)return;
-        end_ = std::chrono::high_resolution_clock::now();
-        start_ticking_ = false;
-        t = std::chrono::duration<double, std::milli>(end_ - start_).count();
-        //std::cout << "Time: " << t << " ms" << std::endl;
-    }
-    double t;
-private:
-    bool start_ticking_ = false;
-    std::chrono::time_point<std::chrono::high_resolution_clock> start_;
-    std::chrono::time_point<std::chrono::high_resolution_clock> end_;
-};
 
 
 /* *
@@ -206,9 +185,7 @@ int main(int argc, char *argv[])
 
         timer.tic();
         tensorNet.imageInference(buffers, output_vector.size() + 1, BATCH_SIZE);
-        timer.toc();
-
-        double msTime = timer.t;
+        double msTime = timer.toc();
         std::cout << msTime << std::endl;
 
         vector<vector<float> > detections;
