@@ -7,6 +7,7 @@
 #include <chrono>
 #include <thread>
 #include "Timer.h"
+#include "util.h"
 
 const char* model  = "../../model/MobileNetSSD_deploy_iplugin.prototxt";
 const char* weight = "../../model/MobileNetSSD_deploy.caffemodel";
@@ -17,7 +18,8 @@ const char* OUTPUT_BLOB_NAME = "detection_out";
 static const uint32_t BATCH_SIZE = 1;
 const int CAMID = 1;
 
-
+const int HEIGHT = 300;
+const int WIDTH  = 300;
 
 /* *
  * @TODO: unifiedMemory is used here under -> ( cudaMallocManaged )
@@ -35,111 +37,17 @@ float* allocateMemory(DimsCHW dims, char* info)
 }
 
 
-void loadImg(cv::Mat &input, 
-             int re_width, 
-             int re_height, 
-             float *data_unifrom, 
-             const float3 mean,
-             const float scale)
-{
-    int line_offset;
-    int offset_g;
-    int offset_r;
-    cv::Mat dst;
-
-    unsigned char *line = NULL;
-    float *unifrom_data = data_unifrom;
-
-    cv::resize(input, dst, cv::Size( re_width, re_height ), (0.0), (0.0), cv::INTER_LINEAR);
-
-    offset_g = re_width * re_height;
-    offset_r = re_width * re_height * 2;
-
-    for(int i = 0; i < re_height; ++i)
-    {
-        line = dst.ptr< unsigned char >(i);
-        line_offset = i * re_width;
-
-        for(int j = 0; j < re_width; ++j)
-        {
-            // b
-            unifrom_data[line_offset + j] = ((float)(line[j * 3] - mean.x) * scale);
-            // g
-            unifrom_data[offset_g + line_offset + j] = ((float)(line[j * 3 + 1] - mean.y) * scale);
-            // r
-            unifrom_data[offset_r + line_offset + j] = ((float)(line[j * 3 + 2] - mean.z) * scale);
-        }
-    }
-}
-
-//thread read video
-/*
-void readPicture()
-{
-    cv::VideoCapture cap("../../testVideo/test.avi");
-    cv::Mat image;
-
-    while(cap.isOpened())
-    {
-        cap >> image;
-        imageBuffer->add(image);
-    }
-}
-*/
-/*
-int openCamera(int camid)
-{
-    cv::VideoCapture cap;
-    cv::Mat image;
-
-    if (!cap.open(camid))
-    {
-        return -1;
-    }
-
-    while(!quit)
-    {
-
-        if (!cap.read(image)) break;
-        if (image.empty()) break;
-
-        cv::waitKey(1);
-    }
-}
-*/
-
 int main(int argc, char *argv[])
 {
     std::vector<std::string> output_vector = {OUTPUT_BLOB_NAME};
 
     TensorNet tensorNet;
-    tensorNet.LoadNetwork(model,weight,INPUT_BLOB_NAME, output_vector,BATCH_SIZE);
+    tensorNet.LoadNetwork(model, weight, INPUT_BLOB_NAME, output_vector, BATCH_SIZE);
 
     DimsCHW dimsData = tensorNet.getTensorDims(INPUT_BLOB_NAME);
     DimsCHW dimsOut  = tensorNet.getTensorDims(OUTPUT_BLOB_NAME);
 
-    //float* data = allocateMemory(dimsData, (char*)"input blob");
-    //std::cout << "allocate data" << std::endl;
-
-    float* output = allocateMemory(dimsOut, (char*)"output blob");
-    std::cout << "allocate output" << std::endl;
-    
-    int height = 300;
-    int width  = 300;
-
-    //cv::Mat frame, srcImg;
-    cv::Mat srcImg;
-
-    void* imgCPU;
-    void* imgCUDA;
-    Timer timer;
-
-    //std::thread readTread(readPicture);
-    //readTread.detach();
-    //
-    //
     cv::VideoCapture cap;
-    cv::Mat image;
 
     if (!cap.open(CAMID))
     {
@@ -147,14 +55,26 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    const size_t size = width * height * sizeof(float3);
-    void* imgData = malloc(size);
-    //memset(imgData, 0, size);
+    float* output = allocateMemory(dimsOut, (char*)"output blob");
+    std::cout << "allocate output" << std::endl;
     
+    
+    cv::Mat image, srcImg; // camera frame, displayed clone
+    void* imgCUDA;
+
+    const size_t size = WIDTH * HEIGHT * sizeof(float3);
+    void* imgData = malloc(size); // normalized image
+
+    if (CUDA_FAILED(cudaMalloc(&imgCUDA, size)))
+    {
+        cout <<"Cuda Memory allocation error occured." << endl;
+        return -1;
+    }
+
+    Timer timer;
+
     while(1)
     {
-        //imageBuffer->consume(frame);
-
         if (!cap.read(image)) 
         {
             std::cout << "cannot read camera image\n";
@@ -168,17 +88,23 @@ int main(int argc, char *argv[])
         }
 
         srcImg = image.clone();
-        cv::resize(image, image, cv::Size(300,300));
+
+        cv::resize(image, image, cv::Size(WIDTH, HEIGHT));
         
-        if (CUDA_FAILED(cudaMalloc(&imgCUDA, size)))
-        {
-            cout <<"Cuda Memory allocation error occured." << endl;
-            break;
-        }
 
-        loadImg(image, height, width, (float*)imgData, make_float3(127.5,127.5,127.5), 0.007843);
+        loadImg(image, HEIGHT, WIDTH, (float*)imgData, make_float3(127.5,127.5,127.5), 0.007843);
 
+        // imgData normalized float image
         cudaMemcpyAsync(imgCUDA, imgData, size, cudaMemcpyHostToDevice);
+
+
+        /* clone mat to gpu
+            cast to float
+            cudanormalize
+        
+            cudaHostAlloc
+            cudaFreeHost
+        */
 
 
         void* buffers[] = { imgCUDA, output };
@@ -232,7 +158,6 @@ int main(int argc, char *argv[])
 
     free(imgData);
     cudaFree(imgCUDA);
-    cudaFreeHost(imgCPU);
     cudaFree(output);
     tensorNet.destroy();
     return 0;
