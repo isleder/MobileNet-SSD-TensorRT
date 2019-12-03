@@ -90,13 +90,12 @@ int main(int argc, char *argv[])
         srcImg = image.clone();
 
         cv::resize(image, image, cv::Size(WIDTH, HEIGHT));
+
         
-
-        loadImg(image, HEIGHT, WIDTH, (float*)imgData, make_float3(127.5,127.5,127.5), 0.007843);
-
-        // imgData normalized float image
-        cudaMemcpyAsync(imgCUDA, imgData, size, cudaMemcpyHostToDevice);
-
+        std::cout << "IMAGE rows, cols" << image.rows << " " << image.cols << std::endl;
+        
+        //uint8_t CV_8U
+        unsigned char *h_a;
 
         /* clone mat to gpu
             cast to float
@@ -105,6 +104,15 @@ int main(int argc, char *argv[])
             cudaHostAlloc
             cudaFreeHost
         */
+
+
+        loadImg(image, HEIGHT, WIDTH, (float*)imgData, make_float3(127.5,127.5,127.5), 0.007843);
+
+        // imgData normalized float image
+        cudaMemcpyAsync(imgCUDA, imgData, size, cudaMemcpyHostToDevice);
+
+
+
 
 
         void* buffers[] = { imgCUDA, output };

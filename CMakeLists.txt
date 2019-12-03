@@ -39,7 +39,7 @@ set(CUDA_NVCC_FLAGS
         -gencode arch=compute_50,code=compute_50
         -gencode arch=compute_52,code=sm_52
         -gencode arch=compute_61,code=sm_61
-	-gencode arch=compute_62,code=sm_62
+	    -gencode arch=compute_62,code=sm_62
         )
 
 file(GLOB cudaSources cuda/*.cu)
@@ -59,10 +59,17 @@ link_directories(${OpenCV_LIBRARY_DIRS})
 
 cuda_add_library(inferLib SHARED ${sources})
 ##
-target_link_libraries(inferLib /usr/lib/aarch64-linux-gnu/libnvcaffe_parser.so)
-target_link_libraries(inferLib /usr/lib/aarch64-linux-gnu/libnvinfer.so)
-target_link_libraries(inferLib /usr/lib/aarch64-linux-gnu/libnvinfer_plugin.so)
-target_link_libraries(inferLib /usr/lib/aarch64-linux-gnu/libnvparsers.so)
+
+
+target_link_libraries(inferLib /usr/lib/x86_64-linux-gnu/libnvcaffe_parser.so)
+target_link_libraries(inferLib /usr/lib/x86_64-linux-gnu/libnvinfer.so)
+target_link_libraries(inferLib /usr/lib/x86_64-linux-gnu/libnvinfer_plugin.so)
+target_link_libraries(inferLib /usr/lib/x86_64-linux-gnu/libnvparsers.so)
+
+#target_link_libraries(inferLib /usr/lib/aarch64-linux-gnu/libnvcaffe_parser.so)
+#target_link_libraries(inferLib /usr/lib/aarch64-linux-gnu/libnvinfer.so)
+#target_link_libraries(inferLib /usr/lib/aarch64-linux-gnu/libnvinfer_plugin.so)
+#target_link_libraries(inferLib /usr/lib/aarch64-linux-gnu/libnvparsers.so)
 
 
 # transfer all headers to the include directory

@@ -4,7 +4,6 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <cuda.h>
 #include <cuda_runtime.h>
-
 #include "util.h"
 
 void loadImg(cv::Mat &input, 

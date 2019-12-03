@@ -147,7 +147,7 @@ bool loadImageRGB( const char* filename, float3** cpu, float3** gpu, int* width,
 */
 
 
-bool    loadImageBGR( cv::Mat frame, float3** cpu, float3** gpu, int* width, int* height, const float3& mean )
+bool loadImageBGR( cv::Mat frame, float3** cpu, float3** gpu, int* width, int* height, const float3& mean )
 {
 	const uint32_t imgWidth  = 300;
 	const uint32_t imgHeight = 300;
@@ -167,7 +167,7 @@ bool    loadImageBGR( cv::Mat frame, float3** cpu, float3** gpu, int* width, int
 	{
 		for( uint32_t x=0; x < imgWidth; x++ )
 		{
-      cv::Vec3b intensity = frame.at<cv::Vec3b>(y,x);
+            cv::Vec3b intensity = frame.at<cv::Vec3b>(y,x);
 			cpuPtr[imgPixels * 0 + y * imgWidth + x] = (float)intensity.val[0];
 			cpuPtr[imgPixels * 1 + y * imgWidth + x] = (float)intensity.val[1];
 			cpuPtr[imgPixels * 2 + y * imgWidth + x] = (float)intensity.val[2];
